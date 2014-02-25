@@ -42,7 +42,7 @@ module examples
     import SkeletonClipNode			= away.animators.SkeletonClipNode;
     import CrossfadeTransition		= away.animators.CrossfadeTransition;
     import PerspectiveProjection	= away.projections.PerspectiveProjection;
-    import View					= away.containers.View;
+    import View						= away.containers.View;
     import HoverController			= away.controllers.HoverController;
     import AnimationStateEvent		= away.events.AnimationStateEvent;
     import AssetEvent				= away.events.AssetEvent;
