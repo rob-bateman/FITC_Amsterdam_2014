@@ -188,14 +188,6 @@ module examples
 				case Keyboard.NUMBER_2:
 					this.playAction("attack2");
 					break;
-				case Keyboard.NUMBER_3:
-					this.playAction("attack03");
-					break;
-				case Keyboard.NUMBER_4:
-					this.playAction("attack04");
-					break;
-				case Keyboard.NUMBER_5:
-					this.playAction("attack05");
 			}
 		}
 		
