@@ -1,4 +1,4 @@
-///<reference path="../libs/away3d.next.d.ts" />
+///<reference path="../libs/stagegl-renderer.next.d.ts" />
 /*
 AWD file loading example in Away3d
 Demonstrates:
@@ -26,8 +26,6 @@ THE SOFTWARE.
 */
 var examples;
 (function (examples) {
-    var SkeletonAnimator = away.animators.SkeletonAnimator;
-    var SkeletonClipNode = away.animators.SkeletonClipNode;
     var CrossfadeTransition = away.animators.CrossfadeTransition;
     var PerspectiveProjection = away.projections.PerspectiveProjection;
     var View = away.containers.View;
@@ -37,12 +35,11 @@ var examples;
     var Vector3D = away.geom.Vector3D;
     var AssetLibrary = away.library.AssetLibrary;
     var AssetType = away.library.AssetType;
-    var Loader3D = away.containers.Loader3D;
+    var Loader = away.containers.Loader;
     var AWD2Parser = away.parsers.AWDParser;
     var URLRequest = away.net.URLRequest;
     var DefaultRenderer = away.render.DefaultRenderer;
     var Keyboard = away.ui.Keyboard;
-    var RequestAnimationFrame = away.utils.RequestAnimationFrame;
 
     var Intermediate_AWDViewer = (function () {
         /**
@@ -89,15 +86,39 @@ var examples;
         * Initialise the scene objects
         */
         Intermediate_AWDViewer.prototype.initObjects = function () {
+            var _this = this;
             AssetLibrary.enableParser(AWD2Parser);
 
             //kickoff asset loading
-            var loader = new Loader3D();
-            loader.addEventListener(AssetEvent.ASSET_COMPLETE, away.utils.Delegate.create(this, this.onAssetComplete));
-
+            var loader = new Loader();
             loader.load(new URLRequest("assets/shambler.awd"));
+            loader.addEventListener(AssetEvent.ASSET_COMPLETE, function (event) {
+                return _this.onAssetComplete(event);
+            });
 
             this._view.scene.addChild(loader);
+        };
+
+        Intermediate_AWDViewer.prototype.onAssetComplete = function (event) {
+            var _this = this;
+            switch (event.asset.assetType) {
+                case AssetType.ANIMATOR:
+                    this._animator = event.asset;
+                    this._animator.play(Intermediate_AWDViewer.IDLE_NAME, this._stateTransition);
+                    break;
+                case AssetType.ANIMATION_NODE:
+                    var node = event.asset;
+                    if (node.name != Intermediate_AWDViewer.IDLE_NAME) {
+                        node.looping = false;
+                        node.addEventListener(AnimationStateEvent.PLAYBACK_COMPLETE, function (event) {
+                            return _this.onPlayBackComplete(event);
+                        });
+                    }
+            }
+        };
+
+        Intermediate_AWDViewer.prototype.onPlayBackComplete = function (event) {
+            this._animator.play(Intermediate_AWDViewer.IDLE_NAME, this._stateTransition);
         };
 
         /**
@@ -131,57 +152,19 @@ var examples;
             this._timer.start();
         };
 
-        /**
-        * loader listener for asset complete events
-        */
-        Intermediate_AWDViewer.prototype.onAssetComplete = function (event) {
-            if (event.asset.assetType == AssetType.ANIMATOR) {
-                this._animator = event.asset;
-                this._animator.play(Intermediate_AWDViewer.IDLE_NAME);
-            } else if (event.asset.assetType == AssetType.ANIMATION_NODE) {
-                console.log(event.asset.name);
-                var node = event.asset;
-
-                if (node.name == Intermediate_AWDViewer.IDLE_NAME) {
-                    node.looping = true;
-                } else {
-                    node.looping = false;
-                    node.addEventListener(AnimationStateEvent.PLAYBACK_COMPLETE, away.utils.Delegate.create(this, this.onPlaybackComplete));
-                }
-            }
-        };
-
-        /**
-        * Key down listener for animation
-        */
         Intermediate_AWDViewer.prototype.onKeyDown = function (event) {
             switch (event.keyCode) {
                 case Keyboard.NUMBER_1:
-                    this.playAction("attack1");
+                    this.playAttack("attack1");
                     break;
                 case Keyboard.NUMBER_2:
-                    this.playAction("attack2");
+                    this.playAttack("attack2");
                     break;
-                case Keyboard.NUMBER_3:
-                    this.playAction("attack03");
-                    break;
-                case Keyboard.NUMBER_4:
-                    this.playAction("attack04");
-                    break;
-                case Keyboard.NUMBER_5:
-                    this.playAction("attack05");
             }
         };
 
-        Intermediate_AWDViewer.prototype.playAction = function (name) {
-            this._animator.play(name, this._stateTransition, 0);
-        };
-
-        Intermediate_AWDViewer.prototype.onPlaybackComplete = function (event) {
-            if (this._animator.activeState != event.animationState)
-                return;
-
-            this._animator.play(Intermediate_AWDViewer.IDLE_NAME, this._stateTransition);
+        Intermediate_AWDViewer.prototype.playAttack = function (value) {
+            this._animator.play(value, this._stateTransition, 0);
         };
 
         /**

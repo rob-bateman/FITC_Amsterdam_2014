@@ -1,4 +1,4 @@
-///<reference path="../libs/away3d.next.d.ts" />
+///<reference path="../libs/stagegl-renderer.next.d.ts" />
 
 /*
 
@@ -49,7 +49,7 @@ module examples
 	import Vector3D					= away.geom.Vector3D;
     import AssetLibrary				= away.library.AssetLibrary;
     import AssetType				= away.library.AssetType;
-    import Loader3D					= away.containers.Loader3D;
+    import Loader					= away.containers.Loader;
     import AWD2Parser				= away.parsers.AWDParser;
 	import URLRequest				= away.net.URLRequest;
 	import DefaultRenderer			= away.render.DefaultRenderer;
@@ -127,12 +127,34 @@ module examples
 			AssetLibrary.enableParser(AWD2Parser);
 
 			//kickoff asset loading
-			var loader:Loader3D = new Loader3D();
-			loader.addEventListener(AssetEvent.ASSET_COMPLETE, away.utils.Delegate.create(this, this.onAssetComplete));
-
+			var loader:Loader = new Loader();
 			loader.load(new URLRequest("assets/shambler.awd"));
+			loader.addEventListener(AssetEvent.ASSET_COMPLETE, (event:AssetEvent) => this.onAssetComplete(event))
 
 			this._view.scene.addChild(loader);
+		}
+
+		private onAssetComplete(event:AssetEvent)
+		{
+			switch(event.asset.assetType)
+			{
+				case AssetType.ANIMATOR:
+					this._animator = <SkeletonAnimator> event.asset;
+					this._animator.play(Intermediate_AWDViewer.IDLE_NAME, this._stateTransition);
+					break;
+				case AssetType.ANIMATION_NODE:
+					var node:SkeletonClipNode = <SkeletonClipNode> event.asset;
+					if (node.name != Intermediate_AWDViewer.IDLE_NAME)
+					{
+						node.looping = false;
+						node.addEventListener(AnimationStateEvent.PLAYBACK_COMPLETE, (event:AnimationStateEvent) => this.onPlayBackComplete(event));
+					}
+			}
+		}
+
+		private onPlayBackComplete(event:AnimationStateEvent)
+		{
+			this._animator.play(Intermediate_AWDViewer.IDLE_NAME, this._stateTransition);
 		}
 
         /**
@@ -140,13 +162,13 @@ module examples
          */
         private initListeners():void
 		{
-			window.onresize  = (event) => this.onResize(event);
+			window.onresize  = (event:UIEvent) => this.onResize(event);
 
-			document.onmousedown = (event) => this.onMouseDown(event);
-			document.onmouseup = (event) => this.onMouseUp(event);
-			document.onmousemove = (event) => this.onMouseMove(event);
-			document.onmousewheel = (event) => this.onMouseWheel(event);
-			document.onkeydown = (event) => this.onKeyDown(event);
+			document.onmousedown = (event:MouseEvent) => this.onMouseDown(event);
+			document.onmouseup = (event:MouseEvent) => this.onMouseUp(event);
+			document.onmousemove = (event:MouseEvent) => this.onMouseMove(event);
+			document.onmousewheel = (event:MouseWheelEvent) => this.onMouseWheel(event);
+			document.onkeydown = (event:KeyboardEvent) => this.onKeyDown(event);
 
 			this.onResize();
 
@@ -154,56 +176,25 @@ module examples
 			this._timer.start();
 
         }
-		
-		/**
-		 * loader listener for asset complete events
-		 */		
-		private onAssetComplete(event:AssetEvent):void
+
+		private onKeyDown(event:KeyboardEvent)
 		{
-			if (event.asset.assetType == AssetType.ANIMATOR) {
-				this._animator = <SkeletonAnimator> event.asset;
-				this._animator.play(Intermediate_AWDViewer.IDLE_NAME);
-			} else if (event.asset.assetType == AssetType.ANIMATION_NODE) {
-				console.log(event.asset.name);
-				var node:SkeletonClipNode = <SkeletonClipNode> event.asset;
-				
-				if (node.name == Intermediate_AWDViewer.IDLE_NAME) {
-					node.looping = true;
-				} else {
-					node.looping = false;
-					node.addEventListener(AnimationStateEvent.PLAYBACK_COMPLETE, away.utils.Delegate.create(this, this.onPlaybackComplete));
-				}
-			}
-		}
-		
-		/**
-		 * Key down listener for animation
-		 */
-		private onKeyDown(event:KeyboardEvent):void
-		{
-			switch (event.keyCode) {
+			switch(event.keyCode)
+			{
 				case Keyboard.NUMBER_1:
-					this.playAction("attack1");
+					this.playAttack("attack1");
 					break;
 				case Keyboard.NUMBER_2:
-					this.playAction("attack2");
+					this.playAttack("attack2");
 					break;
 			}
 		}
-		
-		private playAction(name:string):void
-		{
-			this._animator.play(name, this._stateTransition, 0);
-		}
-		
-		private onPlaybackComplete(event:AnimationStateEvent):void
-		{
-			if (this._animator.activeState != event.animationState)
-				return;
 
-			this._animator.play(Intermediate_AWDViewer.IDLE_NAME, this._stateTransition);
+		private playAttack(value:string)
+		{
+			this._animator.play(value, this._stateTransition, 0);
 		}
-		
+
         /**
          * Render loop
          */
@@ -222,7 +213,7 @@ module examples
 		/**
 		 * Mouse down listener for navigation
 		 */
-		private onMouseDown(event):void
+		private onMouseDown(event:MouseEvent):void
 		{
 			this._lastPanAngle = this._cameraController.panAngle;
 			this._lastTiltAngle = this._cameraController.tiltAngle;
@@ -234,12 +225,12 @@ module examples
 		/**
 		 * Mouse up listener for navigation
 		 */
-		private onMouseUp(event):void
+		private onMouseUp(event:MouseEvent):void
 		{
 			this._move = false;
 		}
 
-		private onMouseMove(event)
+		private onMouseMove(event:MouseEvent)
 		{
 			if (this._move) {
 				this._cameraController.panAngle = 0.3*(event.clientX - this._lastMouseX) + this._lastPanAngle;
@@ -250,7 +241,7 @@ module examples
 		/**
 		 * Mouse wheel listener for navigation
 		 */
-		private onMouseWheel(event):void
+		private onMouseWheel(event:MouseWheelEvent):void
 		{
 			this._cameraController.distance -= event.wheelDelta * 5;
 
@@ -263,7 +254,7 @@ module examples
 		/**
 		 * window listener for resize events
 		 */
-		private onResize(event = null):void
+		private onResize(event:UIEvent = null):void
 		{
 			this._view.y         = 0;
 			this._view.x         = 0;
